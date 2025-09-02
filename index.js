@@ -91,11 +91,15 @@ const commands = [
                 )
         ),
 
-    // THAY ĐỔI: XÓA TÙY CHỌN KÊNH KHỎI LỆNH FEEDBACK
     new SlashCommandBuilder()
         .setName('feedback')
-        .setDescription('Mở một form để gửi phản hồi trực tiếp.'),
-        
+        .setDescription('Mở một form để gửi phản hồi trực tiếp.')
+        .addChannelOption(option =>
+            option.setName('kênh')
+                .setDescription('Kênh để gửi phản hồi. Bỏ trống sẽ gửi đến kênh mặc định.')
+                .addChannelTypes(ChannelType.GuildText)
+                .setRequired(false)
+        ),
     new SlashCommandBuilder()
         .setName('kick')
         .setDescription('Kick một thành viên khỏi server.')
@@ -216,23 +220,14 @@ client.on('interactionCreate', async interaction => {
             const tieuDe = interaction.fields.getTextInputValue('tieuDeInput');
             const noiDung = interaction.fields.getTextInputValue('noiDungInput');
             const danhGia = interaction.fields.getTextInputValue('danhGiaInput') || 'Chưa đánh giá';
-            const feedbackEmbed = new EmbedBuilder()
-                .setColor('Green')
-                .setTitle(`❤️ Tên người hỗ trợ: ${tieuDe}`)
-                .addFields(
-                    { name: 'Nội dung chính:', value: noiDung },
-                    { name: 'Nội dung phụ', value: `**${danhGia}**` }
-                )
-                .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
-                .setTimestamp();
+            const feedbackEmbed = new EmbedBuilder().setColor('Green').setTitle(`📝 Phản hồi mới: ${tieuDe}`).setDescription(noiDung).addFields({ name: 'Đánh giá', value: `**${danhGia}**` }).setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() }).setTimestamp();
             try {
                 const channel = await client.channels.fetch(channelId);
                 if (channel) {
                     await channel.send({ embeds: [feedbackEmbed] });
-                    // THAY ĐỔI: Cải thiện tin nhắn phản hồi
-                    await interaction.reply({ content: `Cảm ơn bạn! Phản hồi của bạn đã được ghi nhận.`, ephemeral: true });
+                    await interaction.reply({ content: `Cảm ơn bạn! Phản hồi đã được gửi tới kênh ${channel}.`, ephemeral: true });
                 } else {
-                    await interaction.reply({ content: 'Lỗi: Không tìm thấy kênh mặc định để gửi phản hồi.', ephemeral: true });
+                    await interaction.reply({ content: 'Lỗi: Không tìm thấy kênh được chỉ định.', ephemeral: true });
                 }
             } catch (error) {
                 console.error("Lỗi khi gửi feedback:", error);
@@ -246,11 +241,11 @@ client.on('interactionCreate', async interaction => {
         const customId = interaction.customId;
 
         if (customId === 'create_ticket') {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ ephemeral: true }); // THÊM
             const ticketChannelName = `ticket-${interaction.user.username}`;
             const existingChannel = interaction.guild.channels.cache.find(c => c.name === ticketChannelName);
             if (existingChannel) {
-                return interaction.followUp({ content: `Bạn đã có một ticket đang mở tại ${existingChannel}.` });
+                return interaction.followUp({ content: `Bạn đã có một ticket đang mở tại ${existingChannel}.` }); // THAY ĐỔI
             }
             try {
                 const ticketChannel = await interaction.guild.channels.create({
@@ -266,10 +261,10 @@ client.on('interactionCreate', async interaction => {
                 const closeButton = new ButtonBuilder().setCustomId('close_ticket').setLabel('Đóng Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒');
                 const row = new ActionRowBuilder().addComponents(closeButton);
                 await ticketChannel.send({ content: `Chào mừng ${interaction.user}! Đội ngũ <@&${SUPPORT_ROLE_ID}> sẽ hỗ trợ bạn ngay.`, components: [row] });
-                await interaction.followUp({ content: `Đã tạo ticket của bạn tại ${ticketChannel}.` });
+                await interaction.followUp({ content: `Đã tạo ticket của bạn tại ${ticketChannel}.` }); // THAY ĐỔI
             } catch (error) {
                 console.error("Lỗi khi tạo ticket:", error);
-                await interaction.followUp({ content: 'Đã có lỗi xảy ra khi tạo ticket. Vui lòng kiểm tra lại ID Category và quyền của bot.' });
+                await interaction.followUp({ content: 'Đã có lỗi xảy ra khi tạo ticket. Vui lòng kiểm tra lại ID Category và quyền của bot.' }); // THAY ĐỔI
             }
         }
         if (customId === 'close_ticket') {
@@ -337,12 +332,12 @@ client.on('interactionCreate', async interaction => {
             }
         }
         else if (commandName === 'hi1') {
-            await interaction.deferReply();
+            await interaction.deferReply(); // THÊM
             const targetUser = interaction.options.getUser('người');
-            await interaction.followUp(`Hellu ${targetUser}, chúc bạn một ngày tốt lành! <:reaction_role_1876:1410282620738339040>`);
+            await interaction.followUp(`Hellu ${targetUser}, chúc bạn một ngày tốt lành! <:reaction_role_1876:1410282620738339040>`); // THAY ĐỔI
         }
         else if (commandName === 'hi2') {
-            await interaction.deferReply();
+            await interaction.deferReply(); // THÊM
             const targetUser = interaction.options.getUser('người');
             const chonBuoi = interaction.options.getString('chon_buoi');
             const loiChucTuyY = interaction.options.getString('loi_chuc');
@@ -358,10 +353,10 @@ client.on('interactionCreate', async interaction => {
             } else {
                 loiChuc = `Hii ${targetUser}, chúc bạn một ngày tốt lành! 💕`;
             }
-            await interaction.followUp(loiChuc);
+            await interaction.followUp(loiChuc); // THAY ĐỔI
         }
         else if (commandName === 'time') { 
-            await interaction.deferReply();
+            await interaction.deferReply(); // THÊM
             const timeZone = interaction.options.getString('quoc_gia') || 'Asia/Ho_Chi_Minh'; 
             const choiceName = interaction.options.getString('quoc_gia') ? commands.find(c => c.name === 'time').options[0].choices.find(ch => ch.value === timeZone).name : '🇻🇳 Việt Nam'; 
             const now = new Date(); 
@@ -370,11 +365,12 @@ client.on('interactionCreate', async interaction => {
             const minute = timeParts.find(part => part.type === 'minute').value; 
             const dateParts = new Intl.DateTimeFormat('vi-VN', { timeZone: timeZone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(now); 
             const dateTimeString = `${hour}:${minute} ${dateParts}`; 
-            await interaction.followUp(`Tại ${choiceName}, bây giờ là: ${dateTimeString} 🕒`);
+            await interaction.followUp(`Tại ${choiceName}, bây giờ là: ${dateTimeString} 🕒`); // THAY ĐỔI
         }
-        // THAY ĐỔI: ĐƠN GIẢN HÓA CÁCH XỬ LÝ LỆNH FEEDBACK
         else if (commandName === 'feedback') { 
-            const feedbackChannelId = DEFAULT_FEEDBACK_CHANNEL_ID; 
+            // Lệnh này mở Modal nên không cần deferReply
+            const targetChannel = interaction.options.getChannel('kênh'); 
+            const feedbackChannelId = targetChannel ? targetChannel.id : DEFAULT_FEEDBACK_CHANNEL_ID; 
             const modal = new ModalBuilder().setCustomId(`feedbackModal_${feedbackChannelId}`).setTitle('Gửi phản hồi cho Phúc'); 
             const tieuDeInput = new TextInputBuilder().setCustomId('tieuDeInput').setLabel("Tên của bạn ?").setStyle(TextInputStyle.Short).setPlaceholder('Ghi ở đây !').setRequired(true); 
             const noiDungInput = new TextInputBuilder().setCustomId('noiDungInput').setLabel("Nội dung").setStyle(TextInputStyle.Paragraph).setPlaceholder('Bạn muốn nói điều gì ? Hãy ghi ở đây !').setRequired(true); 
@@ -386,113 +382,113 @@ client.on('interactionCreate', async interaction => {
             await interaction.showModal(modal); 
         }
         else if (commandName === 'kick' || commandName === 'ban') { 
-            await interaction.deferReply();
+            await interaction.deferReply(); // THÊM
             const target = interaction.options.getMember('người'); 
             const reason = interaction.options.getString('reason') ?? 'Không có lý do được cung cấp.'; 
-            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên này.', ephemeral: true });
-            if (target.id === interaction.user.id) return interaction.followUp({ content: 'Bạn không thể tự thực hiện hành động này lên chính mình!', ephemeral: true });
-            if (target.roles.highest.position >= interaction.member.roles.highest.position) return interaction.followUp({ content: 'Bạn không thể thực hiện hành động lên người có vai trò cao hơn hoặc bằng bạn.', ephemeral: true });
+            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên này.', ephemeral: true }); // THAY ĐỔI
+            if (target.id === interaction.user.id) return interaction.followUp({ content: 'Bạn không thể tự thực hiện hành động này lên chính mình!', ephemeral: true }); // THAY ĐỔI
+            if (target.roles.highest.position >= interaction.member.roles.highest.position) return interaction.followUp({ content: 'Bạn không thể thực hiện hành động lên người có vai trò cao hơn hoặc bằng bạn.', ephemeral: true }); // THAY ĐỔI
             const action = commandName === 'kick' ? 'kick' : 'ban'; 
             const actionVerb = commandName === 'kick' ? 'Kick' : 'Ban'; 
             const color = commandName === 'kick' ? 'Orange' : 'Red'; 
-            if (!target[action + 'able']) return interaction.followUp({ content: `Tôi không có quyền để ${action} thành viên này.`, ephemeral: true });
+            if (!target[action + 'able']) return interaction.followUp({ content: `Tôi không có quyền để ${action} thành viên này.`, ephemeral: true }); // THAY ĐỔI
             try { 
                 await target[action]({ reason }); 
                 const embed = new EmbedBuilder().setColor(color).setTitle(`${actionVerb} thành công`).setDescription(`**${target.user.tag}** đã bị ${action}.`).addFields({ name: 'Lý do', value: reason }).setTimestamp(); 
-                await interaction.followUp({ embeds: [embed] });
+                await interaction.followUp({ embeds: [embed] }); // THAY ĐỔI
             } catch (error) { 
                 console.error(error); 
-                await interaction.followUp({ content: `Đã xảy ra lỗi khi đang cố ${action} thành viên.`, ephemeral: true });
+                await interaction.followUp({ content: `Đã xảy ra lỗi khi đang cố ${action} thành viên.`, ephemeral: true }); // THAY ĐỔI
             } 
         }
         else if (commandName === 'unban') {
-            await interaction.deferReply();
+            await interaction.deferReply(); // THÊM
             const userId = interaction.options.getString('userid');
             try {
                 await interaction.guild.members.unban(userId);
                 const embed = new EmbedBuilder().setColor('Green').setTitle('Unban thành công').setDescription(`Đã gỡ ban cho người dùng có ID: **${userId}**.`);
-                await interaction.followUp({ embeds: [embed] });
+                await interaction.followUp({ embeds: [embed] }); // THAY ĐỔI
             } catch (error) {
                 console.error(error);
-                await interaction.followUp({ content: 'Đã xảy ra lỗi. Vui lòng kiểm tra lại ID hoặc có thể người dùng này không bị ban.', ephemeral: true });
+                await interaction.followUp({ content: 'Đã xảy ra lỗi. Vui lòng kiểm tra lại ID hoặc có thể người dùng này không bị ban.', ephemeral: true }); // THAY ĐỔI
             }
         }
         else if (commandName === 'timeout') { 
-            await interaction.deferReply();
+            await interaction.deferReply(); // THÊM
             const target = interaction.options.getMember('người'); 
             const durationStr = interaction.options.getString('time'); 
             const reason = interaction.options.getString('reason') ?? 'Không có lý do.'; 
-            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên.', ephemeral: true });
-            if (target.id === interaction.user.id) return interaction.followUp({ content: 'Bạn không thể tự timeout mình!', ephemeral: true });
-            if (target.permissions.has(PermissionFlagsBits.Administrator)) return interaction.followUp({ content: 'Bạn không thể timeout một Quản trị viên!', ephemeral: true });
-            if (target.roles.highest.position >= interaction.member.roles.highest.position) { return interaction.followUp({ content: 'Bạn không thể timeout người có vai trò cao hơn hoặc bằng bạn.', ephemeral: true }); }
-            if (!target.moderatable) { return interaction.followUp({ content: 'Tôi không có quyền để timeout thành viên này. Vui lòng kiểm tra lại vai trò của tôi.', ephemeral: true }); }
-            const durationMs = ms(durationStr); if (!durationMs || durationMs > ms('28d')) return interaction.followUp({ content: 'Thời gian không hợp lệ. Vui lòng dùng định dạng như "10m", "1h", "2d" và không quá 28 ngày.', ephemeral: true });
+            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên.', ephemeral: true }); // THAY ĐỔI
+            if (target.id === interaction.user.id) return interaction.followUp({ content: 'Bạn không thể tự timeout mình!', ephemeral: true }); // THAY ĐỔI
+            if (target.permissions.has(PermissionFlagsBits.Administrator)) return interaction.followUp({ content: 'Bạn không thể timeout một Quản trị viên!', ephemeral: true }); // THAY ĐỔI
+            if (target.roles.highest.position >= interaction.member.roles.highest.position) { return interaction.followUp({ content: 'Bạn không thể timeout người có vai trò cao hơn hoặc bằng bạn.', ephemeral: true }); } // THAY ĐỔI
+            if (!target.moderatable) { return interaction.followUp({ content: 'Tôi không có quyền để timeout thành viên này. Vui lòng kiểm tra lại vai trò của tôi.', ephemeral: true }); } // THAY ĐỔI
+            const durationMs = ms(durationStr); if (!durationMs || durationMs > ms('28d')) return interaction.followUp({ content: 'Thời gian không hợp lệ. Vui lòng dùng định dạng như "10m", "1h", "2d" và không quá 28 ngày.', ephemeral: true }); // THAY ĐỔI
             try { 
                 await target.timeout(durationMs, reason); 
                 const embed = new EmbedBuilder().setColor('Yellow').setTitle('Timeout thành công').setDescription(`**${target.user.tag}** đã bị timeout.`).addFields({ name: 'Thời gian', value: durationStr }, { name: 'Lý do', value: reason }).setTimestamp(); 
-                await interaction.followUp({ embeds: [embed] });
+                await interaction.followUp({ embeds: [embed] }); // THAY ĐỔI
             } catch (error) { 
                 console.error(error); 
-                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố timeout thành viên.', ephemeral: true });
+                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố timeout thành viên.', ephemeral: true }); // THAY ĐỔI
             } 
         }
         else if (commandName === 'untimeout') {
-            await interaction.deferReply();
+            await interaction.deferReply(); // THÊM
             const target = interaction.options.getMember('người');
-            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên.', ephemeral: true });
-            if (target.id === interaction.user.id) return interaction.followUp({ content: 'Bạn không thể tự gỡ timeout cho mình!', ephemeral: true });
+            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên.', ephemeral: true }); // THAY ĐỔI
+            if (target.id === interaction.user.id) return interaction.followUp({ content: 'Bạn không thể tự gỡ timeout cho mình!', ephemeral: true }); // THAY ĐỔI
             if (target.roles.highest.position >= interaction.member.roles.highest.position) {
-                return interaction.followUp({ content: 'Bạn không thể gỡ timeout cho người có vai trò cao hơn hoặc bằng bạn.', ephemeral: true });
+                return interaction.followUp({ content: 'Bạn không thể gỡ timeout cho người có vai trò cao hơn hoặc bằng bạn.', ephemeral: true }); // THAY ĐỔI
             }
             if (!target.moderatable) {
-                return interaction.followUp({ content: 'Tôi không có quyền để quản lý thành viên này.', ephemeral: true });
+                return interaction.followUp({ content: 'Tôi không có quyền để quản lý thành viên này.', ephemeral: true }); // THAY ĐỔI
             }
             if (!target.isCommunicationDisabled()) {
-                return interaction.followUp({ content: 'Thành viên này không đang bị timeout.', ephemeral: true });
+                return interaction.followUp({ content: 'Thành viên này không đang bị timeout.', ephemeral: true }); // THAY ĐỔI
             }
             try {
                 await target.timeout(null);
                 const embed = new EmbedBuilder().setColor('Green').setTitle('Gỡ Timeout thành công').setDescription(`Đã gỡ timeout cho **${target.user.tag}**.`);
-                await interaction.followUp({ embeds: [embed] });
+                await interaction.followUp({ embeds: [embed] }); // THAY ĐỔI
             } catch (error) {
                 console.error(error);
-                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố gỡ timeout.', ephemeral: true });
+                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố gỡ timeout.', ephemeral: true }); // THAY ĐỔI
             }
         }
         else if (commandName === 'rename') { 
-            await interaction.deferReply();
+            await interaction.deferReply(); // THÊM
             const target = interaction.options.getMember('người'); 
             const nickname = interaction.options.getString('nickname'); 
-            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên.', ephemeral: true });
-            if (target.roles.highest.position >= interaction.member.roles.highest.position && interaction.guild.ownerId !== interaction.user.id) return interaction.followUp({ content: 'Bạn không thể đổi tên người có vai trò cao hơn hoặc bằng bạn.', ephemeral: true });
+            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên.', ephemeral: true }); // THAY ĐỔI
+            if (target.roles.highest.position >= interaction.member.roles.highest.position && interaction.guild.ownerId !== interaction.user.id) return interaction.followUp({ content: 'Bạn không thể đổi tên người có vai trò cao hơn hoặc bằng bạn.', ephemeral: true }); // THAY ĐỔI
             try { 
                 const oldNickname = target.displayName; 
                 await target.setNickname(nickname); 
                 const embed = new EmbedBuilder().setColor('Blue').setTitle('Đổi tên thành công').setDescription(`Đã đổi nickname của **${target.user.tag}** từ \`${oldNickname}\` thành \`${nickname}\`.`); 
-                await interaction.followUp({ embeds: [embed] });
+                await interaction.followUp({ embeds: [embed] }); // THAY ĐỔI
             } catch (error) { 
                 console.error(error); 
-                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố đổi tên thành viên. Có thể nickname quá dài hoặc tôi không có quyền.', ephemeral: true });
+                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố đổi tên thành viên. Có thể nickname quá dài hoặc tôi không có quyền.', ephemeral: true }); // THAY ĐỔI
             } 
         }
         else if (commandName === 'move') { 
-            await interaction.deferReply();
+            await interaction.deferReply(); // THÊM
             const target = interaction.options.getMember('người'); 
             const channel = interaction.options.getChannel('channel'); 
-            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên.', ephemeral: true });
-            if (!target.voice.channel) return interaction.followUp({ content: 'Thành viên này không ở trong kênh thoại nào.', ephemeral: true });
+            if (!target) return interaction.followUp({ content: 'Không tìm thấy thành viên.', ephemeral: true }); // THAY ĐỔI
+            if (!target.voice.channel) return interaction.followUp({ content: 'Thành viên này không ở trong kênh thoại nào.', ephemeral: true }); // THAY ĐỔI
             try { 
                 await target.voice.setChannel(channel); 
                 const embed = new EmbedBuilder().setColor('Purple').setTitle('Di chuyển thành công').setDescription(`Đã di chuyển **${target.user.tag}** đến kênh thoại **${channel.name}**.`); 
-                await interaction.followUp({ embeds: [embed] });
+                await interaction.followUp({ embeds: [embed] }); // THAY ĐỔI
             } catch (error) { 
                 console.error(error); 
-                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố di chuyển thành viên. Vui lòng kiểm tra lại quyền của tôi.', ephemeral: true });
+                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố di chuyển thành viên. Vui lòng kiểm tra lại quyền của tôi.', ephemeral: true }); // THAY ĐỔI
             } 
         }
         else if (commandName === 'ticketsetup') {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ ephemeral: true }); // THÊM
             const tieuDe = interaction.options.getString('tieu_de');
             const moTa = interaction.options.getString('mo_ta').replace(/\\n/g, '\n');
             const hinhAnh = interaction.options.getString('hinh_anh');
@@ -503,10 +499,10 @@ client.on('interactionCreate', async interaction => {
             const openButton = new ButtonBuilder().setCustomId('create_ticket').setLabel('Mở Ticket').setStyle(ButtonStyle.Success).setEmoji('<:Email37:1412322372790255636>');
             const row = new ActionRowBuilder().addComponents(openButton);
             await interaction.channel.send({ embeds: [ticketEmbed], components: [row] });
-            await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển ticket.' });
+            await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển ticket.' }); // THAY ĐỔI
         }
         else if (commandName === 'formsetup') {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ ephemeral: true }); // THÊM
             const tieuDe = interaction.options.getString('tieu_de');
             const moTa = interaction.options.getString('mo_ta').replace(/\\n/g, '\n');
             const hinhAnh = interaction.options.getString('hinh_anh');
@@ -527,7 +523,7 @@ client.on('interactionCreate', async interaction => {
             const row = new ActionRowBuilder().addComponents(openFormButton);
 
             await interaction.channel.send({ embeds: [formEmbed], components: [row] });
-            await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển form.' });
+            await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển form.' }); // THAY ĐỔI
         }
     }
 });
