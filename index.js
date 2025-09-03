@@ -38,11 +38,13 @@ const commands = [
             subcommand
                 .setName('server')
                 .setDescription('Hiển thị thông tin về server hiện tại.')
-        ),
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     new SlashCommandBuilder()
         .setName('ping')
-        .setDescription('Kiểm tra độ trễ của bot'),
+        .setDescription('Kiểm tra độ trễ của bot')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     new SlashCommandBuilder()
         .setName('hi1')
@@ -51,7 +53,8 @@ const commands = [
             option.setName('người')
                 .setDescription('Người bạn muốn chào')
                 .setRequired(true)
-        ),
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     new SlashCommandBuilder()
         .setName('hi2')
         .setDescription('Gửi lời chúc theo buổi tới một người dễ thương.')
@@ -75,7 +78,8 @@ const commands = [
             option.setName('loi_chuc')
                 .setDescription('Hoặc tự nhập một lời chúc riêng.')
                 .setRequired(false)
-        ),
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     new SlashCommandBuilder()
         .setName('time')
@@ -93,7 +97,8 @@ const commands = [
                     { name: '🇷🇺 Nga (Moscow)', value: 'Europe/Moscow' },
                     { name: '🇬🇧 Vương quốc Anh', value: 'Europe/London' }
                 )
-        ),
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     new SlashCommandBuilder()
         .setName('feedback')
@@ -103,13 +108,14 @@ const commands = [
                 .setDescription('Kênh để gửi phản hồi. Bỏ trống sẽ gửi đến kênh mặc định.')
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(false)
-        ),
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     new SlashCommandBuilder()
         .setName('kick')
         .setDescription('Kick một thành viên khỏi server.')
         .addUserOption(option => option.setName('người').setDescription('Thành viên cần kick').setRequired(true))
         .addStringOption(option => option.setName('reason').setDescription('Lý do kick'))
-        .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers | PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
     new SlashCommandBuilder()
@@ -117,14 +123,14 @@ const commands = [
         .setDescription('Ban một thành viên khỏi server.')
         .addUserOption(option => option.setName('người').setDescription('Thành viên cần ban').setRequired(true))
         .addStringOption(option => option.setName('reason').setDescription('Lý do ban'))
-        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers | PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
     new SlashCommandBuilder()
         .setName('unban')
         .setDescription('Gỡ ban cho một thành viên bằng ID.')
         .addStringOption(option => option.setName('userid').setDescription('ID của người dùng cần gỡ ban').setRequired(true))
-        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers | PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
     new SlashCommandBuilder()
@@ -133,14 +139,14 @@ const commands = [
         .addUserOption(option => option.setName('người').setDescription('Thành viên cần timeout').setRequired(true))
         .addStringOption(option => option.setName('time').setDescription('Thời gian mute (vd: 10m, 1h, 2d)').setRequired(true))
         .addStringOption(option => option.setName('reason').setDescription('Lý do mute'))
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers | PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
     new SlashCommandBuilder()
         .setName('untimeout')
         .setDescription('Gỡ timeout cho một thành viên.')
         .addUserOption(option => option.setName('người').setDescription('Thành viên cần gỡ timeout').setRequired(true))
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers | PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
     new SlashCommandBuilder()
@@ -148,7 +154,7 @@ const commands = [
         .setDescription('Đổi nickname cho một thành viên.')
         .addUserOption(option => option.setName('người').setDescription('Thành viên cần đổi tên').setRequired(true))
         .addStringOption(option => option.setName('nickname').setDescription('Nickname mới').setRequired(true))
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames | PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
     new SlashCommandBuilder()
@@ -156,7 +162,7 @@ const commands = [
         .setDescription('Di chuyển một thành viên sang kênh thoại khác.')
         .addUserOption(option => option.setName('người').setDescription('Thành viên cần di chuyển').setRequired(true))
         .addChannelOption(option => option.setName('channel').setDescription('Kênh thoại muốn chuyển đến').addChannelTypes(ChannelType.GuildVoice).setRequired(true))
-        .setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers | PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
     new SlashCommandBuilder()
