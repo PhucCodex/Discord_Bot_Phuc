@@ -24,6 +24,7 @@ const SUPPORT_ROLE_ID = '1412090993909563534';
 const WELCOME_CHANNEL_ID = '1406560267214524527';
 const GOODBYE_CHANNEL_ID = '1406559808114393121';
 const AUTO_ROLE_ID = '1406560015925514290'; // ⚠️ THAY BẰNG ID VAI TRÒ "THÀNH VIÊN" CỦA BẠN
+const GOODBYE_GIF_URL = 'https://i.pinimg.com/originals/ec/c6/8e/ecc68e64677d55433d833ac1e6a713fd.gif'
 
 const commands = [
     new SlashCommandBuilder()
@@ -958,21 +959,17 @@ client.on('guildMemberAdd', async member => {
 });
 
 client.on('guildMemberRemove', async member => {
-    // Bước 1: Kiểm tra xem thông tin thành viên có bị thiếu (partial) không
     if (member.partial) {
         try {
-            // Nếu thiếu, yêu cầu Discord cung cấp thông tin đầy đủ
             await member.fetch();
         } catch (error) {
             console.error('Lỗi khi fetch thông tin đầy đủ của thành viên đã rời đi:', error);
-            // Nếu không lấy được thông tin, gửi một tin nhắn đơn giản chỉ với ID
             const channel = member.guild.channels.cache.get(GOODBYE_CHANNEL_ID);
             if(channel) await channel.send(`Một thành viên với ID: ${member.id} đã rời khỏi server.`);
             return;
         }
     }
 
-    // Bây giờ, chúng ta đã có thông tin đầy đủ của 'member'
     if (member.user.bot) return;
 
     const channel = member.guild.channels.cache.get(GOODBYE_CHANNEL_ID);
@@ -982,19 +979,12 @@ client.on('guildMemberRemove', async member => {
     }
 
     try {
-        const goodbyeImages = [
-            'https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUybTBkbWM4ZjM4cDZoYzRkdGx3eHlrdTBraTduYnIzd3poNW1iZnFnbiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VelWewgR6CpNK/giphy.gif',
-            'https://i.pinimg.com/originals/ec/c6/8e/ecc68e64677d55433d833ac1e6a713fd.gif',
-            'https://media1.tenor.com/m/buPx8dUsXH8AAAAC/jake-gyllenhaal-bye-bye.gif'
-        ];
-        const randomGoodbyeImage = goodbyeImages[Math.floor(Math.random() * goodbyeImages.length)];
-
         const goodbyeEmbed = new EmbedBuilder()
             .setColor('#FF474D')
             .setTitle(`👋 Một thành viên đã rời đi 👋`)
             .setDescription(`**${member.user.tag}** đã rời khỏi server. Hẹn gặp lại!`)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-            .setImage(randomGoodbyeImage)
+            .setImage(GOODBYE_GIF_URL) // Sử dụng link ảnh GIF cố định
             .setTimestamp()
             .setFooter({ text: `Hiện tại server còn lại ${member.guild.memberCount} thành viên.` });
 
