@@ -15,10 +15,11 @@ const ms = require('ms');
 require('dotenv').config();
 
 
-const DEFAULT_FEEDBACK_CHANNEL_ID = '1128546415250198539'; // ID kênh mặc định cho /feedback
-const TICKET_CATEGORY_ID = '1412100711931445452'; // ID của Danh mục (Category) nơi các kênh ticket sẽ được tạo
-const SUPPORT_ROLE_ID = '1412090993909563534';    // ID của vai trò (Role) Support Team
-
+const DEFAULT_FEEDBACK_CHANNEL_ID = '1128546415250198539';
+const TICKET_CATEGORY_ID = '1412100711931445452'; 
+const SUPPORT_ROLE_ID = '1412090993909563534';    
+const WELCOME_CHANNEL_ID = '1406560267214524527';
+const GOODBYE_CHANNEL_ID = '1406559808114393121';
 
 // THAY ĐỔI: CẬP NHẬT LỆNH /INFO
 const commands = [
@@ -387,9 +388,23 @@ try {
         }
 
         else if (commandName === 'hi1') {
-            await interaction.deferReply(); // THÊM
+            await interaction.deferReply();
             const targetUser = interaction.options.getUser('người');
-            await interaction.followUp(`Hellu ${targetUser}, chúc bạn một ngày tốt lành! <:reaction_role_1876:1410282620738339040>`); // THAY ĐỔI
+
+            
+            const greetings = [
+                `Hellu ${targetUser}, chúc bạn một ngày tốt lành! <:reaction_role_1876:1410282620738339040>`,
+                `Helo ${targetUser}! Chúc bạn có nhìu niềm zui`,
+                `${targetUser}. Chúc con vợ có nhiều niềm zui <a:emoji_12022:1410282605042995230>`,
+                `Hiluu ${targetUser}, chúc bạn một ngày mới an lành <:HeheCat:1412640800877187114>`,
+                `Chào ${targetUser}, chúc các bạn một ngày vui <:15597073609823thumbnail:1412641080616419418>`
+            ];
+
+            
+            const randomMessage = greetings[Math.floor(Math.random() * greetings.length)];
+
+            
+            await interaction.followUp(randomMessage);
         }
         else if (commandName === 'hi2') {
             await interaction.deferReply(); // THÊM
@@ -585,3 +600,60 @@ try {
 
 
 client.login(process.env.DISCORD_TOKEN);
+
+client.on('guildMemberAdd', async member => {
+    // Bỏ qua nếu người tham gia là bot
+    if (member.user.bot) return;
+
+    // Lấy kênh chào mừng từ ID đã khai báo
+    const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+    if (!channel) {
+        console.log(`Lỗi: Không tìm thấy kênh chào mừng với ID: ${WELCOME_CHANNEL_ID}`);
+        return;
+    }
+
+    // Tạo tin nhắn embed chào mừng
+    const welcomeEmbed = new EmbedBuilder()
+        .setColor('#57F287') // Màu xanh lá cây
+        .setTitle(`🎉 Chào mừng thành viên mới! 🎉`)
+        .setDescription(`Chào mừng con vợ ${member} đã hạ cánh xuống server!\n\nHy vọng con vợ sẽ có những giây phút vui vẻ và tuyệt vời tại đây.`)
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setTimestamp()
+        .setFooter({ text: `Hiện tại server có ${member.guild.memberCount} thành viên.` });
+
+    // Gửi tin nhắn vào kênh
+    try {
+        await channel.send({ embeds: [welcomeEmbed] });
+    } catch (error) {
+        console.error("Lỗi khi gửi tin nhắn chào mừng:", error);
+    }
+});
+
+// Sự kiện khi có thành viên rời khỏi server (bị kick, ban, hoặc tự rời)
+client.on('guildMemberRemove', async member => {
+    // Bỏ qua nếu người rời đi là bot
+    if (member.user.bot) return;
+
+    // Lấy kênh tạm biệt từ ID đã khai báo
+    const channel = member.guild.channels.cache.get(GOODBYE_CHANNEL_ID);
+    if (!channel) {
+        console.log(`Lỗi: Không tìm thấy kênh tạm biệt với ID: ${GOODBYE_CHANNEL_ID}`);
+        return;
+    }
+
+    // Tạo tin nhắn embed tạm biệt
+    const goodbyeEmbed = new EmbedBuilder()
+        .setColor('#FF474D') // Màu đỏ
+        .setTitle(`👋 Một thành viên đã rời đi 👋`)
+        .setDescription(`**${member.user.tag}** đã rời khỏi server. Hẹn gặp lại!`)
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setTimestamp()
+        .setFooter({ text: `Hiện tại server còn lại ${member.guild.memberCount} thành viên.` });
+
+    // Gửi tin nhắn vào kênh
+    try {
+        await channel.send({ embeds: [goodbyeEmbed] });
+    } catch (error) {
+        console.error("Lỗi khi gửi tin nhắn tạm biệt:", error);
+    }
+});
