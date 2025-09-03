@@ -23,7 +23,7 @@ const TICKET_CATEGORY_ID = '1412100711931445452';
 const SUPPORT_ROLE_ID = '1412090993909563534';    
 const WELCOME_CHANNEL_ID = '1406560267214524527';
 const GOODBYE_CHANNEL_ID = '1406559808114393121';
-const AUTO_ROLE_ID = '1406560015925514290'; // ⚠️ THAY BẰNG ID VAI TRÒ "THÀNH VIÊN" CỦA BẠN
+const AUTO_ROLE_ID = 'ID_VAI_TRÒ_TỰ_ĐỘNG'; // ⚠️ THAY BẰNG ID VAI TRÒ "THÀNH VIÊN" CỦA BẠN
 
 const commands = [
     new SlashCommandBuilder()
@@ -923,7 +923,8 @@ client.on('guildMemberAdd', async member => {
 
         const welcomeEmbed = new EmbedBuilder()
             .setColor('#57F287')
-            .setTitle(`🎉 Chào mừng thành viên mới! <@&${SUPPORT_ROLE_ID}> ra chào bạn mới nào ! 🎉`)
+            .setTitle(`🎉 Chào mừng thành viên mới! 🎉`)
+            // Xóa dòng tag role khỏi đây
             .setDescription(`Chào mừng con vợ ${member} đã hạ cánh xuống server!\n\nHy vọng con vợ sẽ có những giây phút vui vẻ và tuyệt vời tại đây.`)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
             .setImage(randomImage)
@@ -931,7 +932,11 @@ client.on('guildMemberAdd', async member => {
             .setFooter({ text: `Hiện tại server có ${member.guild.memberCount} thành viên.` });
 
         try {
-            await channel.send({ embeds: [welcomeEmbed] });
+            // Gửi tin nhắn có cả content (để ping) và embed
+            await channel.send({ 
+                content: `<@&${SUPPORT_ROLE_ID}> ơi, có thành viên mới ${member} nè!`,
+                embeds: [welcomeEmbed] 
+            });
         } catch (error) {
             console.error("Lỗi khi gửi tin nhắn chào mừng:", error);
         }
@@ -983,4 +988,3 @@ client.on('guildMemberRemove', async member => {
         console.error("Lỗi khi gửi tin nhắn tạm biệt:", error);
     }
 });
-
