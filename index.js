@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3000;
 
 app.get('/', (req, res) => {
   res.send('Bot đã sẵn sàng!');
@@ -39,6 +39,10 @@ const commands = [
                 .setName('server')
                 .setDescription('Hiển thị thông tin về server hiện tại.')
         ),
+
+    new SlashCommandBuilder()
+        .setName('ping')
+        .setDescription('Kiểm tra độ trễ của bot'),
 
     new SlashCommandBuilder()
         .setName('hi1')
@@ -247,25 +251,50 @@ client.on('interactionCreate', async interaction => {
             if (existingChannel) {
                 return interaction.followUp({ content: `Bạn đã có một ticket đang mở tại ${existingChannel}.` }); // THAY ĐỔI
             }
-            try {
-                const ticketChannel = await interaction.guild.channels.create({
-                    name: ticketChannelName,
-                    type: ChannelType.GuildText,
-                    parent: TICKET_CATEGORY_ID,
-                    permissionOverwrites: [
-                        { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                        { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-                        { id: SUPPORT_ROLE_ID, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-                    ],
-                });
-                const closeButton = new ButtonBuilder().setCustomId('close_ticket').setLabel('Đóng Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒');
-                const row = new ActionRowBuilder().addComponents(closeButton);
-                await ticketChannel.send({ content: `Chào mừng ${interaction.user}! Đội ngũ <@&${SUPPORT_ROLE_ID}> sẽ hỗ trợ bạn ngay.`, components: [row] });
-                await interaction.followUp({ content: `Đã tạo ticket của bạn tại ${ticketChannel}.` }); // THAY ĐỔI
-            } catch (error) {
-                console.error("Lỗi khi tạo ticket:", error);
-                await interaction.followUp({ content: 'Đã có lỗi xảy ra khi tạo ticket. Vui lòng kiểm tra lại ID Category và quyền của bot.' }); // THAY ĐỔI
-            }
+            
+try {
+    const ticketChannel = await interaction.guild.channels.create({
+        name: ticketChannelName,
+        type: ChannelType.GuildText,
+        parent: TICKET_CATEGORY_ID,
+        permissionOverwrites: [
+            { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+            { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+            { id: SUPPORT_ROLE_ID, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+        ],
+    });
+
+   
+
+ 
+    const ticketWelcomeEmbed = new EmbedBuilder()
+        .setColor('#57F287') // Màu xanh lá cây của Discord
+        .setTitle('🎟️ Ticket Hỗ Trợ Đã Được Tạo')
+        .setDescription(`Chào ${interaction.user}, cảm ơn bạn đã liên hệ.\n\nĐội ngũ <@&${SUPPORT_ROLE_ID}> sẽ phản hồi trong thời gian sớm nhất. Vui lòng trình bày chi tiết vấn đề của bạn ở đây.`)
+        .setTimestamp()
+        .setFooter({ text: `Ticket được tạo bởi ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
+
+   
+    const closeButton = new ButtonBuilder()
+        .setCustomId('close_ticket')
+        .setLabel('Đóng Ticket')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🔒');
+    const row = new ActionRowBuilder().addComponents(closeButton);
+    
+
+    await ticketChannel.send({ 
+        content: `${interaction.user} <@&${SUPPORT_ROLE_ID}>`, // Để ping ở đây để nó hoạt động
+        embeds: [ticketWelcomeEmbed], 
+        components: [row] 
+    });
+
+    await interaction.followUp({ content: `Đã tạo ticket của bạn tại ${ticketChannel}.` });
+
+} catch (error) {
+    console.error("Lỗi khi tạo ticket:", error);
+    await interaction.followUp({ content: 'Đã có lỗi xảy ra khi tạo ticket. Vui lòng kiểm tra lại ID Category và quyền của bot.' });
+}
         }
         if (customId === 'close_ticket') {
             if (!interaction.member.roles.cache.has(SUPPORT_ROLE_ID) && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -331,6 +360,26 @@ client.on('interactionCreate', async interaction => {
                 await interaction.followUp({ embeds: [serverEmbed] });
             }
         }
+
+        else if (commandName === 'ping') {
+            await interaction.deferReply();
+
+            const botLatency = Date.now() - interaction.createdTimestamp;
+            const apiLatency = client.ws.ping;
+
+            const pingEmbed = new EmbedBuilder()
+                .setColor('Green')
+                .setTitle('🏓 Pong!')
+                .addFields(
+                    { name: '🤖 Độ trễ Bot', value: `**${botLatency}ms**`, inline: true },
+                    { name: '🌐 Độ trễ API', value: `**${apiLatency}ms**`, inline: true }
+                )
+                .setTimestamp()
+                .setFooter({ text: `Yêu cầu bởi ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
+
+            await interaction.followUp({ embeds: [pingEmbed] });
+        }
+
         else if (commandName === 'hi1') {
             await interaction.deferReply(); // THÊM
             const targetUser = interaction.options.getUser('người');
@@ -484,11 +533,11 @@ client.on('interactionCreate', async interaction => {
                 await interaction.followUp({ embeds: [embed] }); // THAY ĐỔI
             } catch (error) { 
                 console.error(error); 
-                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố di chuyển thành viên. Vui lòng kiểm tra lại quyền của tôi.', ephemeral: true }); // THAY ĐỔI
+                await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố di chuyển thành viên. Vui lòng kiểm tra lại quyền của tôi.', ephemeral: true });
             } 
         }
         else if (commandName === 'ticketsetup') {
-            await interaction.deferReply({ ephemeral: true }); // THÊM
+            await interaction.deferReply({ ephemeral: true });
             const tieuDe = interaction.options.getString('tieu_de');
             const moTa = interaction.options.getString('mo_ta').replace(/\\n/g, '\n');
             const hinhAnh = interaction.options.getString('hinh_anh');
@@ -499,10 +548,10 @@ client.on('interactionCreate', async interaction => {
             const openButton = new ButtonBuilder().setCustomId('create_ticket').setLabel('Mở Ticket').setStyle(ButtonStyle.Success).setEmoji('<:Email37:1412322372790255636>');
             const row = new ActionRowBuilder().addComponents(openButton);
             await interaction.channel.send({ embeds: [ticketEmbed], components: [row] });
-            await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển ticket.' }); // THAY ĐỔI
+            await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển ticket.' });
         }
         else if (commandName === 'formsetup') {
-            await interaction.deferReply({ ephemeral: true }); // THÊM
+            await interaction.deferReply({ ephemeral: true });
             const tieuDe = interaction.options.getString('tieu_de');
             const moTa = interaction.options.getString('mo_ta').replace(/\\n/g, '\n');
             const hinhAnh = interaction.options.getString('hinh_anh');
@@ -515,7 +564,7 @@ client.on('interactionCreate', async interaction => {
             if (hinhAnh) formEmbed.setImage(hinhAnh);
 
             const openFormButton = new ButtonBuilder()
-                .setCustomId(`open_feedback_form_${feedbackChannelId}`) // Gắn ID kênh nhận vào nút
+                .setCustomId(`open_feedback_form_${feedbackChannelId}`)
                 .setLabel('Hỗ Trợ')
                 .setStyle(ButtonStyle.Danger)
                 .setEmoji('<:email49:1412322374891602020>');
@@ -523,11 +572,10 @@ client.on('interactionCreate', async interaction => {
             const row = new ActionRowBuilder().addComponents(openFormButton);
 
             await interaction.channel.send({ embeds: [formEmbed], components: [row] });
-            await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển form.' }); // THAY ĐỔI
+            await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển form.' });
         }
     }
 });
 
 
 client.login(process.env.DISCORD_TOKEN);
-
