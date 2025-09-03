@@ -825,6 +825,7 @@ client.on('guildMemberAdd', async member => {
 client.on('guildMemberRemove', async member => {
     if (member.user.bot) return;
 
+    // SỬA LẠI TÊN BIẾN Ở ĐÂY
     const channel = member.guild.channels.cache.get(GOODBYE_CHANNEL_ID);
     if (!channel) {
         console.log(`Lỗi: Không tìm thấy kênh tạm biệt với ID: ${GOODBYE_CHANNEL_ID}`);
