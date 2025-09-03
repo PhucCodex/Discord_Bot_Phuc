@@ -23,7 +23,7 @@ const TICKET_CATEGORY_ID = '1412100711931445452';
 const SUPPORT_ROLE_ID = '1412090993909563534';    
 const WELCOME_CHANNEL_ID = '1406560267214524527';
 const GOODBYE_CHANNEL_ID = '1406559808114393121';
-const AUTO_ROLE_ID = 'ID_VAI_TRÒ_TỰ_ĐỘNG'; // ⚠️ THAY BẰNG ID VAI TRÒ "THÀNH VIÊN" CỦA BẠN
+const AUTO_ROLE_ID = '1406560015925514290'; // ⚠️ THAY BẰNG ID VAI TRÒ "THÀNH VIÊN" CỦA BẠN
 
 const commands = [
     new SlashCommandBuilder()
@@ -988,3 +988,4 @@ client.on('guildMemberRemove', async member => {
         console.error("Lỗi khi gửi tin nhắn tạm biệt:", error);
     }
 });
+
