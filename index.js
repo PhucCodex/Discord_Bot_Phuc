@@ -598,6 +598,13 @@ client.on('interactionCreate', async interaction => {
             if (!durationMs || durationMs <= 0) {
                 return interaction.followUp({ content: 'Thời hạn không hợp lệ. Vui lòng sử dụng định dạng như "10m", "1h", "7d".' });
             }
+            
+            // THÊM BƯỚC KIỂM TRA GIỚI HẠN THỜI GIAN
+            const maxTimeoutDays = 24;
+            const maxTimeoutMs = maxTimeoutDays * 24 * 60 * 60 * 1000;
+            if (durationMs > maxTimeoutMs) {
+                return interaction.followUp({ content: `Thời hạn quá dài! Tôi chỉ có thể hẹn giờ gỡ vai trò trong tối đa ${maxTimeoutDays} ngày.` });
+            }
     
             try {
                 // Bước 1: Gán vai trò
