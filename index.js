@@ -13,11 +13,12 @@ app.listen(port, () => {
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ModalBuilder, TextInputBuilder, ActionRowBuilder, TextInputStyle, EmbedBuilder, ChannelType, PermissionFlagsBits, ButtonBuilder, ButtonStyle, ActivityType, Partials } = require('discord.js');
 const ms = require('ms');
 require('dotenv').config();
+const { QuickDB } = require("quick.db"); // THAY ĐỔI 1: Thêm quick.db
 
-// BIẾN ĐẾM TICKET, LỊCH HẸN GỠ ROLE VÀ LƯU TRỮ REACTION ROLE
+// BIẾN ĐẾM TICKET, LỊCH HẸN GỠ ROLE VÀ DATABASE
 let ticketCounter = 1;
 const activeRoleTimeouts = new Map(); // Dùng để quản lý các role tạm thời
-const reactionRoleMessages = new Map(); // Dùng để quản lý reaction roles
+const db = new QuickDB(); // THAY ĐỔI 1: Khởi tạo database, thay thế cho reactionRoleMessages Map
 
 const DEFAULT_FEEDBACK_CHANNEL_ID = '1128546415250198539';
 const TICKET_CATEGORY_ID = '1412100711931445452';
@@ -252,7 +253,6 @@ const commands = [
         .setDescription('Reset số đếm của ticket về lại 1.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-    // ⭐ LỆNH MỚI: REACTION ROLE
     new SlashCommandBuilder()
         .setName('reactionrole')
         .setDescription('Cài đặt một tin nhắn reaction role.')
@@ -283,15 +283,14 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 })();
 
 
-// ⭐ THÊM INTENTS VÀ PARTIALS MỚI
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildMessageReactions // Intent mới
+        GatewayIntentBits.GuildMessageReactions
     ],
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction], // Partials mới
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
 client.once('ready', () => {
@@ -923,7 +922,6 @@ client.on('interactionCreate', async interaction => {
             ticketCounter = 1;
             await interaction.reply({ content: '✅ Đã reset số đếm ticket về lại 1.', ephemeral: true });
         }
-        // ⭐ XỬ LÝ LỆNH MỚI: REACTION ROLE
         else if (commandName === 'reactionrole') {
             await interaction.deferReply({ ephemeral: true });
 
@@ -950,7 +948,6 @@ client.on('interactionCreate', async interaction => {
                     return interaction.followUp({ content: `Không tìm thấy vai trò với ID: ${roleId}` });
                 }
                 
-                // Kiểm tra quyền hạn của bot
                 if (role.position >= interaction.guild.members.me.roles.highest.position) {
                     return interaction.followUp({ content: `Tôi không có quyền quản lý vai trò "${role.name}". Vui lòng di chuyển vai trò của tôi lên cao hơn.` });
                 }
@@ -966,7 +963,9 @@ client.on('interactionCreate', async interaction => {
 
             try {
                 const message = await channel.send({ embeds: [embed] });
-                reactionRoleMessages.set(message.id, roleMap);
+                // THAY ĐỔI 2: Lưu vào database thay vì Map
+                const roleMapObject = Object.fromEntries(roleMap);
+                await db.set(`reactionrole_${message.id}`, roleMapObject);
 
                 for (const emoji of roleMap.keys()) {
                     await message.react(emoji);
@@ -1000,7 +999,6 @@ client.on('guildMemberAdd', async member => {
         const welcomeEmbed = new EmbedBuilder()
             .setColor('#57F287')
             .setTitle(`🎉 Chào mừng thành viên mới! 🎉`)
-            // Xóa dòng tag role khỏi đây
             .setDescription(`Chào mừng con vợ ${member} đã hạ cánh xuống server!\n\nHy vọng con vợ sẽ có những giây phút vui vẻ và tuyệt vời tại đây.`)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
             .setImage(randomImage)
@@ -1008,7 +1006,6 @@ client.on('guildMemberAdd', async member => {
             .setFooter({ text: `Hiện tại server có ${member.guild.memberCount} thành viên.` });
 
         try {
-            // Gửi tin nhắn có cả content (để ping) và embed
             await channel.send({
                 content: `<@&${SUPPORT_ROLE_ID}> ơi, có thành viên mới ${member} nè!`,
                 embeds: [welcomeEmbed]
@@ -1059,7 +1056,7 @@ client.on('guildMemberRemove', async member => {
             .setTitle(`👋 Một thành viên đã rời đi 👋`)
             .setDescription(`**${member.user.tag}** đã rời khỏi server. Hẹn gặp lại!`)
             .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-            .setImage(GOODBYE_GIF_URL) // Sử dụng link ảnh GIF cố định
+            .setImage(GOODBYE_GIF_URL)
             .setTimestamp()
             .setFooter({ text: `Hiện tại server còn lại ${member.guild.memberCount} thành viên.` });
 
@@ -1069,12 +1066,9 @@ client.on('guildMemberRemove', async member => {
     }
 });
 
-// ⭐ LISTENER SỰ KIỆN MỚI: MESSAGE REACTION ADD
 client.on('messageReactionAdd', async (reaction, user) => {
-    // Bỏ qua reaction của bot
     if (user.bot) return;
     
-    // Fetch thông tin đầy đủ nếu cần
     if (reaction.partial) {
         try {
             await reaction.fetch();
@@ -1084,9 +1078,10 @@ client.on('messageReactionAdd', async (reaction, user) => {
         }
     }
 
-    // Kiểm tra xem tin nhắn này có phải là tin nhắn reaction role không
-    const roleMap = reactionRoleMessages.get(reaction.message.id);
-    if (!roleMap) return;
+    // THAY ĐỔI 3: Lấy dữ liệu từ database
+    const roleMapObject = await db.get(`reactionrole_${reaction.message.id}`);
+    if (!roleMapObject) return;
+    const roleMap = new Map(Object.entries(roleMapObject));
 
     const emoji = reaction.emoji.name;
     const roleId = roleMap.get(emoji);
@@ -1105,12 +1100,9 @@ client.on('messageReactionAdd', async (reaction, user) => {
     }
 });
 
-// ⭐ LISTENER SỰ KIỆN MỚI: MESSAGE REACTION REMOVE
 client.on('messageReactionRemove', async (reaction, user) => {
-    // Bỏ qua reaction của bot
     if (user.bot) return;
 
-    // Fetch thông tin đầy đủ nếu cần
     if (reaction.partial) {
         try {
             await reaction.fetch();
@@ -1120,10 +1112,11 @@ client.on('messageReactionRemove', async (reaction, user) => {
         }
     }
     
-    // Kiểm tra xem tin nhắn này có phải là tin nhắn reaction role không
-    const roleMap = reactionRoleMessages.get(reaction.message.id);
-    if (!roleMap) return;
-
+    // THAY ĐỔI 4: Lấy dữ liệu từ database
+    const roleMapObject = await db.get(`reactionrole_${reaction.message.id}`);
+    if (!roleMapObject) return;
+    const roleMap = new Map(Object.entries(roleMapObject));
+    
     const emoji = reaction.emoji.name;
     const roleId = roleMap.get(emoji);
 
