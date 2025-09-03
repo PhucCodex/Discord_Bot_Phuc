@@ -14,8 +14,10 @@ const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ModalBuild
 const ms = require('ms');
 require('dotenv').config();
 
-// THÊM BIẾN ĐẾM TICKET
+// BIẾN ĐẾM TICKET VÀ LỊCH HẸN GỠ ROLE
 let ticketCounter = 1;
+// === DÒNG NÀY ĐÃ ĐƯỢC THÊM VÀO ĐỂ SỬA LỖI ===
+const activeRoleTimeouts = new Map(); // Dùng để quản lý các role tạm thời
 
 const DEFAULT_FEEDBACK_CHANNEL_ID = '1128546415250198539';
 const TICKET_CATEGORY_ID = '1412100711931445452'; 
@@ -23,7 +25,6 @@ const SUPPORT_ROLE_ID = '1412090993909563534';
 const WELCOME_CHANNEL_ID = '1406560267214524527';
 const GOODBYE_CHANNEL_ID = '1406559808114393121';
 
-// THÊM LỆNH /resettickets
 const commands = [
     new SlashCommandBuilder()
         .setName('info')
@@ -168,14 +169,20 @@ const commands = [
         .setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers | PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
-    // THÊM LỆNH ROLETEMP MỚI
     new SlashCommandBuilder()
         .setName('roletemp')
         .setDescription('Gán một vai trò tạm thời cho thành viên.')
         .addUserOption(option => option.setName('người').setDescription('Thành viên bạn muốn gán vai trò.').setRequired(true))
         .addRoleOption(option => option.setName('vai_trò').setDescription('Vai trò bạn muốn gán.').setRequired(true))
         .addStringOption(option => option.setName('thời_hạn').setDescription('Thời hạn (ví dụ: 10m, 1h, 7d).').setRequired(true))
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles | PermissionFlagsBits.Administrator),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
+
+    new SlashCommandBuilder()
+        .setName('unroletemp')
+        .setDescription('Gỡ một vai trò tạm thời khỏi thành viên ngay lập tức.')
+        .addUserOption(option => option.setName('người').setDescription('Thành viên bạn muốn gỡ vai trò.').setRequired(true))
+        .addRoleOption(option => option.setName('vai_trò').setDescription('Vai trò bạn muốn gỡ.').setRequired(true))
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
     new SlashCommandBuilder()
         .setName('ticketsetup')
@@ -242,13 +249,12 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 client.once('ready', () => {
     console.log(`✅ Bot đã online! Tên bot: ${client.user.tag}`);
 
-    // Thiết lập trạng thái hoạt động cho bot
     client.user.setPresence({
         activities: [{
-            name: '🌠 Sao Băng Rơi', // Bạn có thể thay đổi nội dung ở đây
-            type: ActivityType.Watching // Hoạt động là "Watching" (Đang xem)
+            name: '🌠 Sao Băng Rơi', 
+            type: ActivityType.Watching 
         }],
-        status: 'idle', // online, idle, dnd, invisible
+        status: 'idle', 
     });
 });
 
@@ -280,11 +286,9 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isButton()) {
         const customId = interaction.customId;
 
-        // THAY ĐỔI LOGIC TẠO TICKET
         if (customId === 'create_ticket') {
             await interaction.deferReply({ ephemeral: true });
             
-            // Sử dụng biến đếm để đặt tên kênh
             const ticketChannelName = `ticket-${ticketCounter}`;
 
             try {
@@ -299,7 +303,6 @@ client.on('interactionCreate', async interaction => {
                     ],
                 });
 
-                // Tăng biến đếm lên 1 cho lần tạo ticket tiếp theo
                 ticketCounter++;
 
                 const ticketWelcomeEmbed = new EmbedBuilder()
@@ -338,8 +341,7 @@ client.on('interactionCreate', async interaction => {
         }
 
         if (customId.startsWith('open_feedback_form_')) {
-            const feedbackChannelId = customId.split('_')[3]; // Lấy ID kênh từ customId của nút
-
+            const feedbackChannelId = customId.split('_')[3]; 
             const modal = new ModalBuilder()
                 .setCustomId(`feedbackModal_${feedbackChannelId}`)
                 .setTitle('Gửi phản hồi cho Phúc');
@@ -395,10 +397,8 @@ client.on('interactionCreate', async interaction => {
 
         else if (commandName === 'ping') {
             await interaction.deferReply();
-
             const botLatency = Date.now() - interaction.createdTimestamp;
             const apiLatency = client.ws.ping;
-
             const pingEmbed = new EmbedBuilder()
                 .setColor('Green')
                 .setTitle('🏓 Pong!')
@@ -408,15 +408,12 @@ client.on('interactionCreate', async interaction => {
                 )
                 .setTimestamp()
                 .setFooter({ text: `Yêu cầu bởi ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
-
             await interaction.followUp({ embeds: [pingEmbed] });
         }
 
         else if (commandName === 'hi1') {
             await interaction.deferReply();
             const targetUser = interaction.options.getUser('người');
-
-            
             const greetings = [
                 `Hellu ${targetUser}, chúc bạn một ngày tốt lành! <:reaction_role_1876:1410282620738339040>`,
                 `Helo ${targetUser}! Chúc bạn có nhìu niềm zui`,
@@ -424,11 +421,7 @@ client.on('interactionCreate', async interaction => {
                 `Hiluu ${targetUser}, chúc bạn một ngày mới an lành <:HeheCat:1412640800877187114>`,
                 `Chào ${targetUser}, chúc các bạn một ngày vui <:15597073609823thumbnail:1412641080616419418>`
             ];
-
-            
             const randomMessage = greetings[Math.floor(Math.random() * greetings.length)];
-
-            
             await interaction.followUp(randomMessage);
         }
         else if (commandName === 'hi2') {
@@ -437,7 +430,6 @@ client.on('interactionCreate', async interaction => {
             const chonBuoi = interaction.options.getString('chon_buoi');
             const loiChucTuyY = interaction.options.getString('loi_chuc');
             let loiChuc;
-
             if (loiChucTuyY) {
                 loiChuc = `Hii ${targetUser}, ${loiChucTuyY}`;
             } else if (chonBuoi) {
@@ -582,7 +574,6 @@ client.on('interactionCreate', async interaction => {
             } 
         }
         
-        // THÊM LOGIC LỆNH ROLETEMP
         else if (commandName === 'roletemp') {
             await interaction.deferReply({ ephemeral: true });
     
@@ -640,9 +631,42 @@ client.on('interactionCreate', async interaction => {
                 await interaction.followUp({ embeds: [embed] });
     
             } catch (error) {
-                console.error('Lỗi chi tiết khi gán vai trò tạm thời:', error); // Log lỗi chi tiết hơn
-                // Gửi lỗi rõ ràng cho bạn xem
+                console.error('Lỗi chi tiết khi gán vai trò tạm thời:', error); 
                 await interaction.followUp({ content: `**Đã xảy ra lỗi khi cố gắng gán vai trò:**\n\`\`\`${error.message}\`\`\`\nVui lòng kiểm tra lại quyền của bot và thứ tự vai trò.` });
+            }
+        }
+
+        else if (commandName === 'unroletemp') {
+            await interaction.deferReply({ ephemeral: true });
+    
+            const target = interaction.options.getMember('người');
+            const role = interaction.options.getRole('vai_trò');
+    
+            if (!target || !role) {
+                return interaction.followUp({ content: 'Không tìm thấy thành viên hoặc vai trò được chỉ định.' });
+            }
+            if (!target.roles.cache.has(role.id)) {
+                return interaction.followUp({ content: 'Thành viên này không có vai trò đó.' });
+            }
+    
+            const timeoutKey = `${target.id}-${role.id}`;
+            if (activeRoleTimeouts.has(timeoutKey)) {
+                clearTimeout(activeRoleTimeouts.get(timeoutKey));
+                activeRoleTimeouts.delete(timeoutKey);
+            }
+    
+            try {
+                await target.roles.remove(role);
+                const embed = new EmbedBuilder()
+                    .setColor('Red')
+                    .setTitle('✅ Gỡ vai trò tạm thời thành công')
+                    .setDescription(`Đã gỡ vai trò ${role} khỏi ${target} ngay lập tức.`)
+                    .setTimestamp()
+                    .setFooter({ text: `Yêu cầu bởi ${interaction.user.tag}` });
+                await interaction.followUp({ embeds: [embed] });
+            } catch (error) {
+                console.error('Lỗi khi gỡ vai trò tạm thời:', error);
+                await interaction.followUp({ content: 'Đã xảy ra lỗi khi cố gắng gỡ vai trò. Vui lòng kiểm tra quyền của tôi.' });
             }
         }
         else if (commandName === 'ticketsetup') {
