@@ -23,6 +23,7 @@ const TICKET_CATEGORY_ID = '1412100711931445452';
 const SUPPORT_ROLE_ID = '1412090993909563534';    
 const WELCOME_CHANNEL_ID = '1406560267214524527';
 const GOODBYE_CHANNEL_ID = '1406559808114393121';
+const AUTO_ROLE_ID = 'ID_VAI_TRÒ_TỰ_ĐỘNG'; // ⚠️ THAY BẰNG ID VAI TRÒ "THÀNH VIÊN" CỦA BẠN
 
 const commands = [
     new SlashCommandBuilder()
@@ -113,6 +114,33 @@ const commands = [
                 .setRequired(false)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+    new SlashCommandBuilder()
+        .setName('avatar')
+        .setDescription('Xem ảnh đại diện của một người dùng.')
+        .addUserOption(option => option.setName('người').setDescription('Người bạn muốn xem avatar').setRequired(false)),
+    
+    new SlashCommandBuilder()
+        .setName('poll')
+        .setDescription('Tạo một cuộc bình chọn nhanh.')
+        .addStringOption(option => option.setName('câu_hỏi').setDescription('Nội dung câu hỏi bình chọn.').setRequired(true))
+        .addStringOption(option => option.setName('lựa_chọn').setDescription('Các lựa chọn, cách nhau bởi dấu phẩy (,). Tối đa 10.').setRequired(true)),
+
+    new SlashCommandBuilder()
+        .setName('announce')
+        .setDescription('Gửi một thông báo dưới dạng embed tới một kênh.')
+        .addChannelOption(option => option.setName('kênh').setDescription('Kênh để gửi thông báo.').setRequired(true).addChannelTypes(ChannelType.GuildText))
+        .addStringOption(option => option.setName('nội_dung').setDescription('Nội dung thông báo. Dùng \\n để xuống dòng.').setRequired(true))
+        .addStringOption(option => option.setName('tiêu_đề').setDescription('Tiêu đề của thông báo.'))
+        .addStringOption(option => option.setName('màu').setDescription('Mã màu Hex cho embed (vd: #3498db).'))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+    new SlashCommandBuilder()
+        .setName('clear')
+        .setDescription('Xóa một số lượng tin nhắn trong kênh hiện tại.')
+        .addIntegerOption(option => option.setName('số_lượng').setDescription('Số tin nhắn cần xóa (từ 1 đến 100).').setRequired(true).setMinValue(1).setMaxValue(100))
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+
     new SlashCommandBuilder()
         .setName('kick')
         .setDescription('Kick một thành viên khỏi server.')
@@ -258,7 +286,6 @@ client.once('ready', () => {
 });
 
 client.on('interactionCreate', async interaction => {
-
     if (interaction.isModalSubmit()) {
         if (interaction.customId.startsWith('feedbackModal_')) {
             const channelId = interaction.customId.split('_')[1];
@@ -367,7 +394,28 @@ client.on('interactionCreate', async interaction => {
 
             if (subcommand === 'user') {
                 const user = interaction.options.getUser('user');
-                await interaction.followUp(`Tên người dùng: ${user.username}\nID: ${user.id}`);
+                const member = interaction.guild.members.cache.get(user.id);
+                const userEmbed = new EmbedBuilder()
+                    .setColor('#0099ff')
+                    .setTitle(`Thông tin về ${user.username}`)
+                    .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+                    .addFields(
+                        { name: '👤 Tên người dùng', value: user.tag, inline: true },
+                        { name: '🆔 ID', value: user.id, inline: true },
+                        { name: '🤖 Có phải là bot?', value: user.bot ? 'Đúng' : 'Không', inline: true },
+                        { name: '📅 Ngày tạo tài khoản', value: `<t:${parseInt(user.createdAt / 1000)}:F>`, inline: false },
+                    )
+                    .setTimestamp();
+
+                if (member) {
+                     userEmbed.addFields(
+                        { name: 'Nicknames', value: member.nickname || 'Không có', inline: true },
+                        { name: '🫂 Ngày tham gia server', value: `<t:${parseInt(member.joinedAt / 1000)}:F>`, inline: false },
+                        { name: '🎨 Vai trò cao nhất', value: member.roles.highest.toString(), inline: true },
+                     );
+                }
+                await interaction.followUp({ embeds: [userEmbed] });
+
             } else if (subcommand === 'server') {
                 const { guild } = interaction;
                 await guild.members.fetch();
@@ -407,7 +455,6 @@ client.on('interactionCreate', async interaction => {
                 .setFooter({ text: `Yêu cầu bởi ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
             await interaction.followUp({ embeds: [pingEmbed] });
         }
-
         else if (commandName === 'hi1') {
             await interaction.deferReply();
             const targetUser = interaction.options.getUser('người');
@@ -463,6 +510,83 @@ client.on('interactionCreate', async interaction => {
             const thirdActionRow = new ActionRowBuilder().addComponents(danhGiaInput); 
             modal.addComponents(firstActionRow, secondActionRow, thirdActionRow); 
             await interaction.showModal(modal); 
+        }
+        else if (commandName === 'avatar') {
+            await interaction.deferReply();
+            const user = interaction.options.getUser('người') || interaction.user;
+            const avatarEmbed = new EmbedBuilder()
+                .setColor('#2b2d31')
+                .setTitle(`Avatar của ${user.username}`)
+                .setImage(user.displayAvatarURL({ dynamic: true, size: 4096 }))
+                .setFooter({ text: `Yêu cầu bởi ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() });
+            await interaction.followUp({ embeds: [avatarEmbed] });
+        }
+        else if (commandName === 'poll') {
+            await interaction.deferReply({ ephemeral: true });
+            const question = interaction.options.getString('câu_hỏi');
+            const optionsStr = interaction.options.getString('lựa_chọn');
+            const options = optionsStr.split(',').map(opt => opt.trim());
+
+            if (options.length < 2 || options.length > 10) {
+                return interaction.followUp({ content: 'Vui lòng cung cấp từ 2 đến 10 lựa chọn, cách nhau bởi dấu phẩy.' });
+            }
+            
+            const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+            const description = options.map((opt, index) => `${numberEmojis[index]} ${opt}`).join('\n\n');
+
+            const pollEmbed = new EmbedBuilder()
+                .setColor('Aqua')
+                .setAuthor({ name: `Bình chọn được tạo bởi ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
+                .setTitle(`📊 ${question}`)
+                .setDescription(description)
+                .setTimestamp();
+            
+            try {
+                const pollMessage = await interaction.channel.send({ embeds: [pollEmbed] });
+                for (let i = 0; i < options.length; i++) {
+                    await pollMessage.react(numberEmojis[i]);
+                }
+                await interaction.followUp({ content: 'Đã tạo bình chọn thành công!' });
+            } catch (error) {
+                console.error("Lỗi khi tạo poll:", error);
+                await interaction.followUp({ content: 'Đã xảy ra lỗi khi tạo bình chọn.' });
+            }
+        }
+        else if (commandName === 'announce') {
+            await interaction.deferReply({ ephemeral: true });
+            const channel = interaction.options.getChannel('kênh');
+            const content = interaction.options.getString('nội_dung').replace(/\\n/g, '\n');
+            const title = interaction.options.getString('tiêu_đề');
+            const color = interaction.options.getString('màu');
+
+            const announceEmbed = new EmbedBuilder()
+                .setDescription(content)
+                .setTimestamp()
+                .setAuthor({ name: `Thông báo từ ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
+
+            if (title) announceEmbed.setTitle(title);
+            if (color) announceEmbed.setColor(color);
+
+            try {
+                await channel.send({ embeds: [announceEmbed] });
+                await interaction.followUp({ content: `Đã gửi thông báo tới kênh ${channel} thành công.` });
+            } catch (error) {
+                console.error("Lỗi khi gửi thông báo:", error);
+                await interaction.followUp({ content: 'Đã có lỗi xảy ra. Vui lòng kiểm tra lại quyền của bot trong kênh đó.' });
+            }
+        }
+        else if (commandName === 'clear') {
+            await interaction.deferReply({ ephemeral: true });
+            const amount = interaction.options.getInteger('số_lượng');
+
+            try {
+                const fetched = await interaction.channel.messages.fetch({ limit: amount });
+                const deletedMessages = await interaction.channel.bulkDelete(fetched, true);
+                await interaction.followUp({ content: `✅ Đã xóa thành công ${deletedMessages.size} tin nhắn.` });
+            } catch (error) {
+                console.error("Lỗi khi xóa tin nhắn:", error);
+                await interaction.followUp({ content: 'Đã có lỗi xảy ra. Vui lòng kiểm tra lại quyền của bot.' });
+            }
         }
         else if (commandName === 'kick' || commandName === 'ban') { 
             await interaction.deferReply(); 
@@ -599,7 +723,6 @@ client.on('interactionCreate', async interaction => {
                 return interaction.followUp({ content: 'Thời hạn không hợp lệ. Vui lòng sử dụng định dạng như "10m", "1h", "7d".' });
             }
             
-            // THÊM BƯỚC KIỂM TRA GIỚI HẠN THỜI GIAN
             const maxTimeoutDays = 24;
             const maxTimeoutMs = maxTimeoutDays * 24 * 60 * 60 * 1000;
             if (durationMs > maxTimeoutMs) {
@@ -607,14 +730,11 @@ client.on('interactionCreate', async interaction => {
             }
     
             try {
-                // Bước 1: Gán vai trò
                 await target.roles.add(role);
     
-                // Bước 2: Kiểm tra lại ngay lập tức để xác nhận
                 const memberAfterUpdate = await interaction.guild.members.fetch({ user: target.id, force: true });
                 
                 if (memberAfterUpdate.roles.cache.has(role.id)) {
-                    // CHỈ BÁO THÀNH CÔNG NẾU KIỂM TRA ĐÚNG
                     const timeoutKey = `${target.id}-${role.id}`;
                     const timeoutId = setTimeout(async () => {
                         try {
@@ -640,7 +760,6 @@ client.on('interactionCreate', async interaction => {
                     
                     await interaction.followUp({ embeds: [embed] });
                 } else {
-                    // BÁO LỖI MỚI NẾU KIỂM TRA THẤT BẠI
                     throw new Error('Hành động gán vai trò đã được thực hiện nhưng không thành công. Vui lòng kiểm tra lại quyền hạn của bot.');
                 }
     
@@ -793,39 +912,49 @@ client.on('guildMemberAdd', async member => {
     if (member.user.bot) return;
 
     const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
-    if (!channel) {
-        console.log(`Lỗi: Không tìm thấy kênh chào mừng với ID: ${WELCOME_CHANNEL_ID}`);
-        return;
+    if (channel) {
+        const welcomeImages = [
+            'https://i.pinimg.com/originals/c2/ce/2d/c2ce2d82a11c90b05ad4abd796ef2fff.gif',
+            'https://giffiles.alphacoders.com/203/203432.gif',
+            'https://gifsec.com/wp-content/uploads/2022/09/welcome-gif-24.gif',
+            'https://i.pinimg.com/originals/8d/ac/4f/8dac4f8274a9ef0381d12b0ca30e1956.gif'
+        ];
+        const randomImage = welcomeImages[Math.floor(Math.random() * welcomeImages.length)];
+
+        const welcomeEmbed = new EmbedBuilder()
+            .setColor('#57F287')
+            .setTitle(`🎉 Chào mừng thành viên mới! <@&${SUPPORT_ROLE_ID}> ra chào bạn mới nào ! 🎉`)
+            .setDescription(`Chào mừng con vợ ${member} đã hạ cánh xuống server!\n\nHy vọng con vợ sẽ có những giây phút vui vẻ và tuyệt vời tại đây.`)
+            .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+            .setImage(randomImage)
+            .setTimestamp()
+            .setFooter({ text: `Hiện tại server có ${member.guild.memberCount} thành viên.` });
+
+        try {
+            await channel.send({ embeds: [welcomeEmbed] });
+        } catch (error) {
+            console.error("Lỗi khi gửi tin nhắn chào mừng:", error);
+        }
     }
 
-    const welcomeImages = [
-        'https://i.pinimg.com/originals/c2/ce/2d/c2ce2d82a11c90b05ad4abd796ef2fff.gif',
-        'https://giffiles.alphacoders.com/203/203432.gif',
-        'https://gifsec.com/wp-content/uploads/2022/09/welcome-gif-24.gif',
-        'https://i.pinimg.com/originals/8d/ac/4f/8dac4f8274a9ef0381d12b0ca30e1956.gif'
-    ];
-    const randomImage = welcomeImages[Math.floor(Math.random() * welcomeImages.length)];
-
-    const welcomeEmbed = new EmbedBuilder()
-        .setColor('#57F287')
-        .setTitle(`🎉 Chào mừng thành viên mới! 🎉`)
-        .setDescription(`Chào mừng con vợ ${member} đã hạ cánh xuống server!\n\nHy vọng con vợ sẽ có những giây phút vui vẻ và tuyệt vời tại đây. <@&${SUPPORT_ROLE_ID}> ra chào bạn mới nào !`)
-        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-        .setImage(randomImage)
-        .setTimestamp()
-        .setFooter({ text: `Hiện tại server có ${member.guild.memberCount} thành viên.` });
-
-    try {
-        await channel.send({ embeds: [welcomeEmbed] });
-    } catch (error) {
-        console.error("Lỗi khi gửi tin nhắn chào mừng:", error);
+    if (AUTO_ROLE_ID) {
+        try {
+            const role = member.guild.roles.cache.get(AUTO_ROLE_ID);
+            if (role) {
+                await member.roles.add(role);
+                console.log(`Đã gán vai trò "${role.name}" cho ${member.user.tag}.`);
+            } else {
+                 console.log(`Không tìm thấy vai trò tự động với ID: ${AUTO_ROLE_ID}`);
+            }
+        } catch (error) {
+            console.error(`Lỗi khi tự động gán vai trò cho ${member.user.tag}:`, error);
+        }
     }
 });
 
 client.on('guildMemberRemove', async member => {
     if (member.user.bot) return;
 
-    // SỬA LẠI TÊN BIẾN Ở ĐÂY
     const channel = member.guild.channels.cache.get(GOODBYE_CHANNEL_ID);
     if (!channel) {
         console.log(`Lỗi: Không tìm thấy kênh tạm biệt với ID: ${GOODBYE_CHANNEL_ID}`);
