@@ -613,8 +613,9 @@ client.on('interactionCreate', async interaction => {
     
             try {
                 await target.roles.add(role);
-    
-                setTimeout(async () => {
+                
+                const timeoutKey = `${target.id}-${role.id}`;
+                const timeoutId = setTimeout(async () => {
                     try {
                         const freshMember = await interaction.guild.members.fetch(target.id).catch(() => null);
                         if (freshMember && freshMember.roles.cache.has(role.id)) {
@@ -624,7 +625,10 @@ client.on('interactionCreate', async interaction => {
                     } catch (err) {
                         console.error(`Lỗi khi tự động gỡ vai trò tạm thời cho ${target.user.tag}:`, err);
                     }
+                    activeRoleTimeouts.delete(timeoutKey);
                 }, durationMs);
+
+                activeRoleTimeouts.set(timeoutKey, timeoutId);
     
                 const embed = new EmbedBuilder()
                     .setColor('Green')
@@ -636,8 +640,9 @@ client.on('interactionCreate', async interaction => {
                 await interaction.followUp({ embeds: [embed] });
     
             } catch (error) {
-                console.error('Lỗi khi gán vai trò tạm thời:', error);
-                await interaction.followUp({ content: 'Đã xảy ra lỗi khi cố gắng gán vai trò. Vui lòng kiểm tra quyền của tôi.' });
+                console.error('Lỗi chi tiết khi gán vai trò tạm thời:', error); // Log lỗi chi tiết hơn
+                // Gửi lỗi rõ ràng cho bạn xem
+                await interaction.followUp({ content: `**Đã xảy ra lỗi khi cố gắng gán vai trò:**\n\`\`\`${error.message}\`\`\`\nVui lòng kiểm tra lại quyền của bot và thứ tự vai trò.` });
             }
         }
         else if (commandName === 'ticketsetup') {
