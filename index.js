@@ -16,7 +16,6 @@ require('dotenv').config();
 
 // BIẾN ĐẾM TICKET VÀ LỊCH HẸN GỠ ROLE
 let ticketCounter = 1;
-// === DÒNG NÀY ĐÃ ĐƯỢC THÊM VÀO ĐỂ SỬA LỖI ===
 const activeRoleTimeouts = new Map(); // Dùng để quản lý các role tạm thời
 
 const DEFAULT_FEEDBACK_CHANNEL_ID = '1128546415250198539';
@@ -357,8 +356,6 @@ client.on('interactionCreate', async interaction => {
             modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
             await interaction.showModal(modal);
         }
-
-        return;
     }
 
     if (interaction.isChatInputCommand()) {
@@ -603,36 +600,46 @@ client.on('interactionCreate', async interaction => {
             }
     
             try {
+                // Bước 1: Gán vai trò
                 await target.roles.add(role);
-                
-                const timeoutKey = `${target.id}-${role.id}`;
-                const timeoutId = setTimeout(async () => {
-                    try {
-                        const freshMember = await interaction.guild.members.fetch(target.id).catch(() => null);
-                        if (freshMember && freshMember.roles.cache.has(role.id)) {
-                            await freshMember.roles.remove(role);
-                            console.log(`Đã tự động gỡ vai trò "${role.name}" khỏi "${target.user.tag}" sau ${durationStr}.`);
-                        }
-                    } catch (err) {
-                        console.error(`Lỗi khi tự động gỡ vai trò tạm thời cho ${target.user.tag}:`, err);
-                    }
-                    activeRoleTimeouts.delete(timeoutKey);
-                }, durationMs);
-
-                activeRoleTimeouts.set(timeoutKey, timeoutId);
     
-                const embed = new EmbedBuilder()
-                    .setColor('Green')
-                    .setTitle('✅ Gán vai trò tạm thời thành công')
-                    .setDescription(`Đã gán vai trò ${role} cho ${target} trong thời hạn **${durationStr}**.`)
-                    .setTimestamp()
-                    .setFooter({ text: `Yêu cầu bởi ${interaction.user.tag}` });
+                // Bước 2: Kiểm tra lại ngay lập tức để xác nhận
+                const memberAfterUpdate = await interaction.guild.members.fetch({ user: target.id, force: true });
                 
-                await interaction.followUp({ embeds: [embed] });
+                if (memberAfterUpdate.roles.cache.has(role.id)) {
+                    // CHỈ BÁO THÀNH CÔNG NẾU KIỂM TRA ĐÚNG
+                    const timeoutKey = `${target.id}-${role.id}`;
+                    const timeoutId = setTimeout(async () => {
+                        try {
+                            const freshMember = await interaction.guild.members.fetch(target.id).catch(() => null);
+                            if (freshMember && freshMember.roles.cache.has(role.id)) {
+                                await freshMember.roles.remove(role);
+                                console.log(`Đã tự động gỡ vai trò "${role.name}" khỏi "${target.user.tag}" sau ${durationStr}.`);
+                            }
+                        } catch (err) {
+                            console.error(`Lỗi khi tự động gỡ vai trò tạm thời cho ${target.user.tag}:`, err);
+                        }
+                        activeRoleTimeouts.delete(timeoutKey);
+                    }, durationMs);
+
+                    activeRoleTimeouts.set(timeoutKey, timeoutId);
+        
+                    const embed = new EmbedBuilder()
+                        .setColor('Green')
+                        .setTitle('✅ Gán vai trò tạm thời thành công')
+                        .setDescription(`Đã gán vai trò ${role} cho ${target} trong thời hạn **${durationStr}**.`)
+                        .setTimestamp()
+                        .setFooter({ text: `Yêu cầu bởi ${interaction.user.tag}` });
+                    
+                    await interaction.followUp({ embeds: [embed] });
+                } else {
+                    // BÁO LỖI MỚI NẾU KIỂM TRA THẤT BẠI
+                    throw new Error('Hành động gán vai trò đã được thực hiện nhưng không thành công. Vui lòng kiểm tra lại quyền hạn của bot.');
+                }
     
             } catch (error) {
                 console.error('Lỗi chi tiết khi gán vai trò tạm thời:', error); 
-                await interaction.followUp({ content: `**Đã xảy ra lỗi khi cố gắng gán vai trò:**\n\`\`\`${error.message}\`\`\`\nVui lòng kiểm tra lại quyền của bot và thứ tự vai trò.` });
+                await interaction.followUp({ content: `**Đã xảy ra lỗi khi cố gắng gán vai trò:**\n\`\`\`${error.message}\`\`\`\nĐây là lỗi từ phía Discord, hãy chắc chắn bot có đủ quyền và vai trò của bot cao hơn vai trò cần gán.` });
             }
         }
 
