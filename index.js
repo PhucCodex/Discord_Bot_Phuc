@@ -636,7 +636,7 @@ client.on('interactionCreate', async interaction => {
             if (destination === 'dm') {
                 const warnEmbedDM = new EmbedBuilder()
                     .setColor('Yellow')
-                    .setTitle('⚖️ Bạn đã nhận một cảnh cáo')
+                    .setTitle('<:PridecordWarning:1412665674026717207> Bạn đã nhận một cảnh cáo')
                     .setDescription(`Bạn đã nhận một cảnh cáo trong server **${interaction.guild.name}**.`)
                     .addFields(
                         { name: 'Người cảnh cáo', value: interaction.user.tag, inline: true },
@@ -655,7 +655,7 @@ client.on('interactionCreate', async interaction => {
             } else { // destination === 'server'
                 const publicWarnEmbed = new EmbedBuilder()
                     .setColor('Yellow')
-                    .setTitle('⚖️ Thành viên đã bị cảnh cáo')
+                    .setTitle('<:PridecordWarning:1412665674026717207> Thành viên đã bị cảnh cáo')
                     .addFields(
                         { name: 'Người bị cảnh cáo', value: target.toString(), inline: true },
                         { name: 'Người thực hiện', value: interaction.user.toString(), inline: true },
