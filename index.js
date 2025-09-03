@@ -186,6 +186,22 @@ const commands = [
         .addStringOption(option => option.setName('hinh_anh').setDescription('URL hình ảnh (ảnh bìa) của bảng điều khiển.'))
         .addStringOption(option => option.setName('mau_sac').setDescription('Mã màu Hex cho đường viền (ví dụ: #FF5733).'))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    
+    // THÊM LỆNH WARN MỚI
+    new SlashCommandBuilder()
+        .setName('warn')
+        .setDescription('Gửi cảnh cáo đến một thành viên.')
+        .addUserOption(option => option.setName('người').setDescription('Thành viên cần cảnh cáo').setRequired(true))
+        .addStringOption(option => option.setName('lý_do').setDescription('Lý do cảnh cáo').setRequired(true))
+        .addStringOption(option => option.setName('nơi_gửi')
+            .setDescription('Chọn nơi gửi cảnh cáo.')
+            .setRequired(true)
+            .addChoices(
+                { name: 'Gửi trong Server (Công khai)', value: 'server' },
+                { name: 'Gửi qua Tin nhắn riêng (DM)', value: 'dm' }
+            )
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
     new SlashCommandBuilder()
         .setName('resettickets')
@@ -595,7 +611,62 @@ client.on('interactionCreate', async interaction => {
             await interaction.channel.send({ embeds: [formEmbed], components: [row] });
             await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển form.' });
         }
-        // THÊM LOGIC CHO LỆNH /resettickets
+
+        // THÊM LOGIC LỆNH WARN
+        else if (commandName === 'warn') {
+            await interaction.deferReply({ ephemeral: true });
+    
+            const target = interaction.options.getMember('người');
+            const reason = interaction.options.getString('lý_do');
+            const destination = interaction.options.getString('nơi_gửi');
+    
+            if (!target) {
+                return interaction.followUp({ content: 'Không tìm thấy thành viên này.' });
+            }
+            if (target.id === interaction.user.id) {
+                return interaction.followUp({ content: 'Bạn không thể tự cảnh cáo chính mình!' });
+            }
+            if (target.permissions.has(PermissionFlagsBits.Administrator)) {
+                return interaction.followUp({ content: 'Bạn không thể cảnh cáo một Quản trị viên!' });
+            }
+            if (target.roles.highest.position >= interaction.member.roles.highest.position && interaction.guild.ownerId !== interaction.user.id) {
+                return interaction.followUp({ content: 'Bạn không thể cảnh cáo người có vai trò cao hơn hoặc bằng bạn.' });
+            }
+            
+            if (destination === 'dm') {
+                const warnEmbedDM = new EmbedBuilder()
+                    .setColor('Yellow')
+                    .setTitle('⚖️ Bạn đã nhận một cảnh cáo')
+                    .setDescription(`Bạn đã nhận một cảnh cáo trong server **${interaction.guild.name}**.`)
+                    .addFields(
+                        { name: 'Người cảnh cáo', value: interaction.user.tag, inline: true },
+                        { name: 'Lý do', value: reason }
+                    )
+                    .setTimestamp()
+                    .setFooter({ text: `Hãy tuân thủ nội quy của server.` });
+
+                try {
+                    await target.send({ embeds: [warnEmbedDM] });
+                    await interaction.followUp({ content: `✅ Đã gửi cảnh cáo đến ${target.user.tag} qua tin nhắn riêng.` });
+                } catch (error) {
+                    console.error("Lỗi khi gửi DM cảnh cáo:", error);
+                    await interaction.followUp({ content: `❌ Không thể gửi tin nhắn riêng cho người dùng này. Họ có thể đã chặn bot hoặc tắt tin nhắn riêng.` });
+                }
+            } else { // destination === 'server'
+                const publicWarnEmbed = new EmbedBuilder()
+                    .setColor('Yellow')
+                    .setTitle('⚖️ Thành viên đã bị cảnh cáo')
+                    .addFields(
+                        { name: 'Người bị cảnh cáo', value: target.toString(), inline: true },
+                        { name: 'Người thực hiện', value: interaction.user.toString(), inline: true },
+                        { name: 'Lý do', value: reason }
+                    )
+                    .setTimestamp();
+                
+                await interaction.channel.send({ embeds: [publicWarnEmbed] });
+                await interaction.followUp({ content: '✅ Đã gửi cảnh cáo công khai trong kênh này.' });
+            }
+        }
         else if (commandName === 'resettickets') {
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 return interaction.reply({ content: 'Bạn không có quyền sử dụng lệnh này.', ephemeral: true });
@@ -645,7 +716,7 @@ client.on('guildMemberAdd', async member => {
 client.on('guildMemberRemove', async member => {
     if (member.user.bot) return;
 
-    const channel = member.guild.channels.cache.get(GOODBE_CHANNEL_ID);
+    const channel = member.guild.channels.cache.get(GOODBYE_CHANNEL_ID);
     if (!channel) {
         console.log(`Lỗi: Không tìm thấy kênh tạm biệt với ID: ${GOODBYE_CHANNEL_ID}`);
         return;
