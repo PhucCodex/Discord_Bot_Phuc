@@ -983,10 +983,10 @@ client.on('guildMemberRemove', async member => {
 
     try {
         const goodbyeImages = [
-    'https://i.imgur.com/fD3iZ6I.gif', // Crying cat
-    'https://i.imgur.com/JCR8X5a.gif', // Sad Kermit
-    'https://i.imgur.com/Vvj4E3V.gif'  // Bye bye bear
-];
+            'https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUybTBkbWM4ZjM4cDZoYzRkdGx3eHlrdTBraTduYnIzd3poNW1iZnFnbiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VelWewgR6CpNK/giphy.gif',
+            'https://i.pinimg.com/originals/ec/c6/8e/ecc68e64677d55433d833ac1e6a713fd.gif',
+            'https://media1.tenor.com/m/buPx8dUsXH8AAAAC/jake-gyllenhaal-bye-bye.gif'
+        ];
         const randomGoodbyeImage = goodbyeImages[Math.floor(Math.random() * goodbyeImages.length)];
 
         const goodbyeEmbed = new EmbedBuilder()
@@ -1003,4 +1003,3 @@ client.on('guildMemberRemove', async member => {
         console.error("Lỗi khi tạo hoặc gửi tin nhắn tạm biệt:", error);
     }
 });
-
