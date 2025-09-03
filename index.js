@@ -168,6 +168,15 @@ const commands = [
         .setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers | PermissionFlagsBits.Administrator)
         .setDMPermission(false),
 
+    // THÊM LỆNH ROLETEMP MỚI
+    new SlashCommandBuilder()
+        .setName('roletemp')
+        .setDescription('Gán một vai trò tạm thời cho thành viên.')
+        .addUserOption(option => option.setName('người').setDescription('Thành viên bạn muốn gán vai trò.').setRequired(true))
+        .addRoleOption(option => option.setName('vai_trò').setDescription('Vai trò bạn muốn gán.').setRequired(true))
+        .addStringOption(option => option.setName('thời_hạn').setDescription('Thời hạn (ví dụ: 10m, 1h, 7d).').setRequired(true))
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles | PermissionFlagsBits.Administrator),
+
     new SlashCommandBuilder()
         .setName('ticketsetup')
         .setDescription('Cài đặt bảng điều khiển ticket có tùy chỉnh.')
@@ -187,7 +196,6 @@ const commands = [
         .addStringOption(option => option.setName('mau_sac').setDescription('Mã màu Hex cho đường viền (ví dụ: #FF5733).'))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
-    // THÊM LỆNH WARN MỚI
     new SlashCommandBuilder()
         .setName('warn')
         .setDescription('Gửi cảnh cáo đến một thành viên.')
@@ -573,6 +581,65 @@ client.on('interactionCreate', async interaction => {
                 await interaction.followUp({ content: 'Đã xảy ra lỗi khi đang cố di chuyển thành viên. Vui lòng kiểm tra lại quyền của tôi.', ephemeral: true });
             } 
         }
+        
+        // THÊM LOGIC LỆNH ROLETEMP
+        else if (commandName === 'roletemp') {
+            await interaction.deferReply({ ephemeral: true });
+    
+            const target = interaction.options.getMember('người');
+            const role = interaction.options.getRole('vai_trò');
+            const durationStr = interaction.options.getString('thời_hạn');
+    
+            if (!target || !role) {
+                return interaction.followUp({ content: 'Không tìm thấy thành viên hoặc vai trò được chỉ định.' });
+            }
+            if (role.position >= interaction.member.roles.highest.position && interaction.guild.ownerId !== interaction.user.id) {
+                return interaction.followUp({ content: 'Bạn không thể gán vai trò cao hơn hoặc bằng vai trò cao nhất của bạn.' });
+            }
+            if (role.position >= interaction.guild.members.me.roles.highest.position) {
+                return interaction.followUp({ content: 'Tôi không thể quản lý vai trò này vì nó cao hơn hoặc bằng vai trò cao nhất của tôi.' });
+            }
+            if (role.managed || role.id === interaction.guild.id) {
+                return interaction.followUp({ content: 'Tôi không thể gán vai trò này (do được quản lý bởi bot khác hoặc là vai trò @everyone).' });
+            }
+            if (target.roles.cache.has(role.id)) {
+                return interaction.followUp({ content: 'Thành viên này đã có vai trò đó rồi.' });
+            }
+    
+            const durationMs = ms(durationStr);
+            if (!durationMs || durationMs <= 0) {
+                return interaction.followUp({ content: 'Thời hạn không hợp lệ. Vui lòng sử dụng định dạng như "10m", "1h", "7d".' });
+            }
+    
+            try {
+                await target.roles.add(role);
+    
+                setTimeout(async () => {
+                    try {
+                        const freshMember = await interaction.guild.members.fetch(target.id).catch(() => null);
+                        if (freshMember && freshMember.roles.cache.has(role.id)) {
+                            await freshMember.roles.remove(role);
+                            console.log(`Đã tự động gỡ vai trò "${role.name}" khỏi "${target.user.tag}" sau ${durationStr}.`);
+                        }
+                    } catch (err) {
+                        console.error(`Lỗi khi tự động gỡ vai trò tạm thời cho ${target.user.tag}:`, err);
+                    }
+                }, durationMs);
+    
+                const embed = new EmbedBuilder()
+                    .setColor('Green')
+                    .setTitle('✅ Gán vai trò tạm thời thành công')
+                    .setDescription(`Đã gán vai trò ${role} cho ${target} trong thời hạn **${durationStr}**.`)
+                    .setTimestamp()
+                    .setFooter({ text: `Yêu cầu bởi ${interaction.user.tag}` });
+                
+                await interaction.followUp({ embeds: [embed] });
+    
+            } catch (error) {
+                console.error('Lỗi khi gán vai trò tạm thời:', error);
+                await interaction.followUp({ content: 'Đã xảy ra lỗi khi cố gắng gán vai trò. Vui lòng kiểm tra quyền của tôi.' });
+            }
+        }
         else if (commandName === 'ticketsetup') {
             await interaction.deferReply({ ephemeral: true });
             const tieuDe = interaction.options.getString('tieu_de');
@@ -612,7 +679,6 @@ client.on('interactionCreate', async interaction => {
             await interaction.followUp({ content: 'Đã cài đặt thành công bảng điều khiển form.' });
         }
 
-        // THÊM LOGIC LỆNH WARN
         else if (commandName === 'warn') {
             await interaction.deferReply({ ephemeral: true });
     
