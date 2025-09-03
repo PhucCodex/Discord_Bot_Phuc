@@ -809,7 +809,7 @@ client.on('guildMemberAdd', async member => {
     const welcomeEmbed = new EmbedBuilder()
         .setColor('#57F287')
         .setTitle(`🎉 Chào mừng thành viên mới! 🎉`)
-        .setDescription(`Chào mừng con vợ ${member} đã hạ cánh xuống server!\n\nHy vọng con vợ sẽ có những giây phút vui vẻ và tuyệt vời tại đây.`)
+        .setDescription(`Chào mừng con vợ ${member} đã hạ cánh xuống server!\n\nHy vọng con vợ sẽ có những giây phút vui vẻ và tuyệt vời tại đây. <@&${SUPPORT_ROLE_ID}> ra chào bạn mới nào !`)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
         .setImage(randomImage)
         .setTimestamp()
