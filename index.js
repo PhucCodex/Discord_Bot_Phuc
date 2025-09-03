@@ -602,26 +602,34 @@ try {
 client.login(process.env.DISCORD_TOKEN);
 
 client.on('guildMemberAdd', async member => {
-    // Bỏ qua nếu người tham gia là bot
     if (member.user.bot) return;
 
-    // Lấy kênh chào mừng từ ID đã khai báo
     const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (!channel) {
         console.log(`Lỗi: Không tìm thấy kênh chào mừng với ID: ${WELCOME_CHANNEL_ID}`);
         return;
     }
 
-    // Tạo tin nhắn embed chào mừng
+    // 1. Tạo danh sách các URL ảnh chào mừng
+    // ⚠️ HÃY THAY THẾ BẰNG CÁC LINK ẢNH CỦA BẠN
+    const welcomeImages = [
+        'https://i.pinimg.com/originals/c2/ce/2d/c2ce2d82a11c90b05ad4abd796ef2fff.gif',
+        'https://giffiles.alphacoders.com/203/203432.gif',
+        'https://gifsec.com/wp-content/uploads/2022/09/welcome-gif-24.gif',
+        'https://i.pinimg.com/originals/8d/ac/4f/8dac4f8274a9ef0381d12b0ca30e1956.gif'
+    ];
+    // 2. Lấy ngẫu nhiên một ảnh từ danh sách
+    const randomImage = welcomeImages[Math.floor(Math.random() * welcomeImages.length)];
+
     const welcomeEmbed = new EmbedBuilder()
-        .setColor('#57F287') // Màu xanh lá cây
+        .setColor('#57F287')
         .setTitle(`🎉 Chào mừng thành viên mới! 🎉`)
         .setDescription(`Chào mừng con vợ ${member} đã hạ cánh xuống server!\n\nHy vọng con vợ sẽ có những giây phút vui vẻ và tuyệt vời tại đây.`)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setImage(randomImage) // 3. Sử dụng ảnh ngẫu nhiên đã chọn
         .setTimestamp()
         .setFooter({ text: `Hiện tại server có ${member.guild.memberCount} thành viên.` });
 
-    // Gửi tin nhắn vào kênh
     try {
         await channel.send({ embeds: [welcomeEmbed] });
     } catch (error) {
@@ -629,28 +637,35 @@ client.on('guildMemberAdd', async member => {
     }
 });
 
-// Sự kiện khi có thành viên rời khỏi server (bị kick, ban, hoặc tự rời)
+// Sự kiện khi có thành viên rời khỏi server
 client.on('guildMemberRemove', async member => {
-    // Bỏ qua nếu người rời đi là bot
     if (member.user.bot) return;
 
-    // Lấy kênh tạm biệt từ ID đã khai báo
     const channel = member.guild.channels.cache.get(GOODBYE_CHANNEL_ID);
     if (!channel) {
         console.log(`Lỗi: Không tìm thấy kênh tạm biệt với ID: ${GOODBYE_CHANNEL_ID}`);
         return;
     }
 
-    // Tạo tin nhắn embed tạm biệt
+    // 1. Tạo danh sách các URL ảnh tạm biệt
+    // ⚠️ HÃY THAY THẾ BẰNG CÁC LINK ẢNH CỦA BẠN
+    const goodbyeImages = [
+        'https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUybTBkbWM4ZjM4cDZoYzRkdGx3eHlrdTBraTduYnIzd3poNW1iZnFnbiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VelWewgR6CpNK/giphy.gif',
+        'https://i.pinimg.com/originals/ec/c6/8e/ecc68e64677d55433d833ac1e6a713fd.gif',
+        'https://media1.tenor.com/m/buPx8dUsXH8AAAAC/jake-gyllenhaal-bye-bye.gif'
+    ];
+    // 2. Lấy ngẫu nhiên một ảnh từ danh sách
+    const randomGoodbyeImage = goodbyeImages[Math.floor(Math.random() * goodbyeImages.length)];
+
     const goodbyeEmbed = new EmbedBuilder()
-        .setColor('#FF474D') // Màu đỏ
+        .setColor('#FF474D')
         .setTitle(`👋 Một thành viên đã rời đi 👋`)
         .setDescription(`**${member.user.tag}** đã rời khỏi server. Hẹn gặp lại!`)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setImage(randomGoodbyeImage) // 3. Sử dụng ảnh ngẫu nhiên đã chọn
         .setTimestamp()
         .setFooter({ text: `Hiện tại server còn lại ${member.guild.memberCount} thành viên.` });
 
-    // Gửi tin nhắn vào kênh
     try {
         await channel.send({ embeds: [goodbyeEmbed] });
     } catch (error) {
